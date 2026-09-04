@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Dashboard</title>
+</head>
+
+<body>
+
+    <header>
+        <h1>Student Dashboard</h1>
+
+        <p>
+            Welcome,
+            {{ user.get_full_name|default:user.username }}
+        </p>
+
+        <p>
+            Role: {{ user.get_role_display }}
+        </p>
+    </header>
+
+    <nav>
+
+        <a href="{% url 'workflows:application_list' %}">
+            Browse Applications
+        </a>
+
+        |
+
+        <form
+            method="post"
+            action="{% url 'accounts:logout' %}"
+            style="display: inline;"
+        >
+            {% csrf_token %}
+
+            <button type="submit">
+                Logout
+            </button>
+        </form>
+
+    </nav>
+
+    <main>
+
+        <section>
+            <h2>My Applications</h2>
+
+            {% if requests %}
+
+                <table border="1" cellpadding="8">
+
+                    <thead>
+                        <tr>
+                            <th>Request</th>
+                            <th>Application</th>
+                            <th>Status</th>
+                            <th>Current Step</th>
+                            <th>Last Updated</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for workflow_request in requests %}
+
+                            <tr>
+
+                                <td>
+                                    #{{ workflow_request.id }}
+                                </td>
+
+                                <td>
+                                    {{ workflow_request.workflow.application.name }}
+                                </td>
+
+                                <td>
+                                    {{ workflow_request.get_status_display }}
+                                </td>
+
+                                <td>
+                                    {% if workflow_request.current_step %}
+                                        {{ workflow_request.current_step.name }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ workflow_request.updated_at }}
+                                </td>
+
+                                <td>
+                                    <a
+                                        href="{% url 'workflows:request_detail' workflow_request.id %}"
+                                    >
+                                        View
+                                    </a>
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            {% else %}
+
+                <p>
+                    You haven't submitted any applications yet.
+                </p>
+
+                <a href="{% url 'workflows:application_list' %}">
+                    Browse Applications
+                </a>
+
+            {% endif %}
+
+        </section>
+
+        <hr>
+
+        <section>
+
+            <h2>Start an Application</h2>
+
+            <p>
+                Browse available university applications.
+            </p>
+
+            <a href="{% url 'workflows:application_list' %}">
+                View Available Applications
+            </a>
+
+        </section>
+
+    </main>
+
+</body>
+
+</html>

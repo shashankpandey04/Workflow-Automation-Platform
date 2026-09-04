@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Request #{{ workflow_request.id }}</title>
+</head>
+
+<body>
+
+    <h1>Request #{{ workflow_request.id }}</h1>
+
+    <p>
+        <strong>Application:</strong>
+        {{ workflow_request.workflow.application.name }}
+    </p>
+
+    <p>
+        <strong>Workflow:</strong>
+        {{ workflow_request.workflow.name }}
+    </p>
+
+    <p>
+        <strong>Submitted by:</strong>
+        {{ workflow_request.submitted_by.username }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+        {{ workflow_request.get_status_display }}
+    </p>
+
+    {% if workflow_request.current_step %}
+        <p>
+            <strong>Current Stage:</strong>
+            {{ workflow_request.current_step.name }}
+        </p>
+
+        <p>
+            <strong>Assigned Role:</strong>
+            {{ workflow_request.current_step.get_assigned_role_display }}
+        </p>
+    {% else %}
+        <p>
+            <strong>Current Stage:</strong>
+            No active review stage
+        </p>
+    {% endif %}
+
+
+    <hr>
+
+    <h2>Application Details</h2>
+
+    {% for field_name, value in workflow_request.form_data.items %}
+        <p>
+            <strong>{{ field_map|get_item:field_name }}</strong>:
+
+            {% if value %}
+                {{ value }}
+            {% else %}
+                Not provided
+            {% endif %}
+        </p>
+    {% empty %}
+        <p>No application data submitted.</p>
+    {% endfor %}
+
+
+    <hr>
+
+    <h2>Uploaded Documents</h2>
+
+    {% for uploaded_file in workflow_request.files.all %}
+        <p>
+            <strong>
+                {{ file_field_map|get_item:uploaded_file.field_name }}
+            </strong>:
+
+            <a href="{{ uploaded_file.file.url }}" target="_blank">
+                View Document
+            </a>
+        </p>
+    {% empty %}
+        <p>No documents uploaded.</p>
+    {% endfor %}
+
+
+    <hr>
+
+    {% if workflow_request.current_step and not workflow_request.is_finished %}
+
+        <h2>Available Actions</h2>
+
+        {% for transition in workflow_request.current_step.transitions.all %}
+
+            <form
+                method="post"
+                action="{% url 'workflows:execute_transition' workflow_request.id transition.id %}"
+            >
+                {% csrf_token %}
+
+                <p>
+                    <strong>{{ transition.name }}</strong>
+                </p>
+
+                <p>
+                    {% if transition.target_step %}
+                        Next stage:
+                        {{ transition.target_step.name }}
+                    {% else %}
+                        {% if transition.action == "REJECT" %}
+                            Result: Rejected
+                        {% elif transition.action == "REQUEST_CHANGES" %}
+                            Result: Changes Requested
+                        {% else %}
+                            Result: Approved
+                        {% endif %}
+                    {% endif %}
+                </p>
+
+                <label for="comment-{{ transition.id }}">
+                    Comment:
+                </label>
+
+                <br>
+
+                <textarea
+                    id="comment-{{ transition.id }}"
+                    name="comment"
+                    rows="4"
+                    cols="50"
+                    placeholder="Add a comment (optional)"
+                ></textarea>
+
+                <br><br>
+
+                <button type="submit">
+                    {{ transition.name }}
+                </button>
+            </form>
+
+            <hr>
+
+        {% empty %}
+            <p>
+                No actions are configured for this stage.
+            </p>
+        {% endfor %}
+
+    {% elif workflow_request.status == "APPROVED" %}
+
+        <h2>Application Approved</h2>
+
+        <p>
+            This application has completed the workflow successfully.
+        </p>
+
+    {% elif workflow_request.status == "REJECTED" %}
+
+        <h2>Application Rejected</h2>
+
+        <p>
+            This application has been rejected.
+        </p>
+
+    {% elif workflow_request.status == "CHANGES_REQUESTED" %}
+
+        <h2>Changes Requested</h2>
+
+        <p>
+            Changes have been requested for this application.
+        </p>
+
+    {% elif workflow_request.status == "CANCELLED" %}
+
+        <h2>Application Cancelled</h2>
+
+        <p>
+            This application has been cancelled.
+        </p>
+
+    {% endif %}
+
+
+    <hr>
+
+    <h2>Workflow History</h2>
+
+    {% for action in workflow_request.actions.all %}
+
+        <div>
+            <p>
+                <strong>
+                    {{ action.get_action_display }}
+                </strong>
+            </p>
+
+            <p>
+                Performed by:
+                {{ action.performed_by.username }}
+            </p>
+
+            {% if action.from_step %}
+                <p>
+                    From:
+                    {{ action.from_step.name }}
+                </p>
+            {% endif %}
+
+            {% if action.to_step %}
+                <p>
+                    To:
+                    {{ action.to_step.name }}
+                </p>
+            {% endif %}
+
+            {% if action.comment %}
+                <p>
+                    Comment:
+                    {{ action.comment }}
+                </p>
+            {% endif %}
+
+            <p>
+                {{ action.created_at }}
+            </p>
+        </div>
+
+        <hr>
+
+    {% empty %}
+        <p>No workflow history available.</p>
+    {% endfor %}
+
+
+    <p>
+        <a href="{% url 'workflows:application_list' %}">
+            Back to Applications
+        </a>
+    </p>
+
+</body>
+</html>
